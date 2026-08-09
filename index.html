@@ -7,6 +7,8 @@
       tailwind = { config: { corePlugins: { preflight: false } } };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="editable-content.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2299,6 +2301,14 @@
           if (e.key === HoneyContent.KEY) applyHoneyOverrides();
         });
         applyHoneyOverrides();
+        if (HoneyContent.isConfigured()) {
+          HoneyContent.sync(function (res) {
+            if (res.ok) {
+              applyHoneyOverrides();
+              HoneyContent.startPolling(applyHoneyOverrides, 12000);
+            }
+          });
+        }
       })();
     </script>
   </body>
