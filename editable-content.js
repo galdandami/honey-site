@@ -2,20 +2,42 @@ window.HoneyContent = (function () {
   var KEY = 'honey-site-content-v1';
   var SECTIONS = ['Анонс', 'Навигация', 'Герой', 'Преимущества', 'Продукт', 'Камско-Устье', 'Процесс', 'Отзывы', 'Заказать', 'Подвал'];
   var BASE_PRICE = 550;
+  var JARS = { '1': { price: 750, stock: 100 }, '3': { price: 2200, stock: 50 } };
   var config = window.SupabaseConfig || null;
   var client = null;
   var lastRemote = null;
   var pollTimer = null;
 
   function defaults() {
-    return { texts: {}, price: null, extras: [] };
+    return { texts: {}, price: null, jars: null, extras: [] };
+  }
+
+  function normJars(j) {
+    var out = {};
+    if (j && typeof j === 'object') {
+      Object.keys(JARS).forEach(function (k) {
+        var e = j[k];
+        var price = e && e.price != null ? Number(e.price) : null;
+        var stock = e && e.stock != null ? Number(e.stock) : null;
+        out[k] = { price: price > 0 ? price : null, stock: stock !== null && stock >= 0 ? stock : null };
+      });
+    }
+    return Object.keys(out).length ? out : null;
   }
 
   function normalize(d) {
     if (!d || typeof d !== 'object') return defaults();
+    var jars = normJars(d.jars);
+    if (!jars && typeof d.price === 'number' && d.price > 0) {
+      jars = {
+        '1': { price: Math.round(d.price * 1.4 / 10) * 10, stock: null },
+        '3': { price: Math.round(d.price * 4.2 / 10) * 10, stock: null }
+      };
+    }
     return {
       texts: d.texts && typeof d.texts === 'object' ? d.texts : {},
       price: typeof d.price === 'number' ? d.price : null,
+      jars: jars,
       extras: Array.isArray(d.extras) ? d.extras : []
     };
   }
@@ -67,16 +89,17 @@ window.HoneyContent = (function () {
 
   function rowToData(row) {
     if (!row) return null;
-    return {
+    return normalize({
       texts: row.texts || {},
       price: row.price != null ? Number(row.price) : null,
+      jars: row.jars || null,
       extras: row.extras || []
-    };
+    });
   }
 
   function dataToRow(d) {
     d = normalize(d);
-    return { texts: d.texts, price: d.price, extras: d.extras };
+    return { texts: d.texts, price: d.price, jars: d.jars, extras: d.extras };
   }
 
   function fetchRemote() {
@@ -84,7 +107,7 @@ window.HoneyContent = (function () {
       var c = getClient();
       if (!c) { resolve({ ok: false, error: 'no-config' }); return; }
       c.from('site_content')
-        .select('texts,price,extras')
+        .select('texts,price,jars,extras')
         .eq('id', 1)
         .maybeSingle()
         .then(function (r) {
@@ -103,6 +126,7 @@ window.HoneyContent = (function () {
       c.rpc('save_content', {
         p_texts: row.texts,
         p_price: row.price,
+        p_jars: row.jars,
         p_extras: row.extras,
         p_secret: String((config && config.editorSecret) || '').trim()
       })
@@ -170,7 +194,7 @@ window.HoneyContent = (function () {
     var n = el;
     while (n && n.nodeType === 1) {
       var nm = n.getAttribute && n.getAttribute('data-pencil-name');
-      if (nm === 'кнопка корзины' || nm === 'степпер' || nm === 'сумма') return true;
+      if (nm === 'кнопка корзины' || nm === 'степпер' || nm === 'сумма' || nm === 'ед' || nm === 'банка 1л' || nm === 'банка 3л') return true;
       n = n.parentElement;
     }
     return false;
@@ -196,6 +220,7 @@ window.HoneyContent = (function () {
   return {
     KEY: KEY,
     BASE_PRICE: BASE_PRICE,
+    JARS: JARS,
     SECTIONS: SECTIONS,
     defaults: defaults,
     load: readCache,

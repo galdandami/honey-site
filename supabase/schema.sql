@@ -9,6 +9,7 @@ create table if not exists public.site_content (
   id         smallint primary key default 1 check (id = 1),
   texts      jsonb not null default '{}'::jsonb,
   price      integer,
+  jars       jsonb not null default '{}'::jsonb,
   extras     jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
@@ -25,9 +26,11 @@ values ('editor_secret', 'CHANGE_ME')
 on conflict (key) do nothing;
 
 -- 3) Функция сохранения контента: проверяет секрет и пишет одну строку
+--    jars — цены и остатки по банкам: {"1": {"price": 750, "stock": 100}, ...}
 create or replace function public.save_content(
   p_texts   jsonb,
   p_price   integer,
+  p_jars    jsonb,
   p_extras  jsonb,
   p_secret  text
 ) returns boolean
@@ -43,17 +46,19 @@ begin
     raise exception 'Неверный ключ редактора';
   end if;
 
-  insert into public.site_content (id, texts, price, extras, updated_at)
+  insert into public.site_content (id, texts, price, jars, extras, updated_at)
   values (
     1,
     coalesce(p_texts, '{}'::jsonb),
     p_price,
+    coalesce(p_jars, '{}'::jsonb),
     coalesce(p_extras, '[]'::jsonb),
     now()
   )
   on conflict (id) do update
     set texts      = excluded.texts,
         price      = excluded.price,
+        jars       = excluded.jars,
         extras     = excluded.extras,
         updated_at = excluded.updated_at;
 
@@ -76,7 +81,7 @@ revoke all on public.meta from anon, authenticated;
 
 --    Записывать можно только через функцию save_content с верным секретом
 grant select on public.site_content to anon;
-grant execute on function public.save_content(jsonb, integer, jsonb, text) to anon;
+grant execute on function public.save_content(jsonb, integer, jsonb, jsonb, text) to anon;
 
 -- =============================================================
 -- Начальное содержимое (пустое = сайт использует оригинальные

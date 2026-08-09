@@ -135,6 +135,29 @@
         animation: pricePop 0.35s ease;
       }
 
+      /* Выбор банки (1 л / 3 л) */
+      .jar-chip {
+        cursor: pointer;
+        border: 1.5px solid #e5d6ae;
+        background: #fffdf7;
+        transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      }
+      .jar-chip:hover {
+        border-color: #d8b26a;
+        transform: translateY(-1px);
+      }
+      .jar-chip.on {
+        background: #e09a2b;
+        border-color: #e09a2b;
+        box-shadow: 0 10px 22px rgba(224, 154, 43, 0.35);
+      }
+      .jar-chip .jt { color: #2b1d0e; }
+      .jar-chip .jpt { color: #97836a; }
+      .jar-chip .jav { color: #5f7f4f; }
+      .jar-chip .jav.out { color: #7a2e2e; }
+      .jar-chip.on .jt, .jar-chip.on .jpt, .jar-chip.on .jav { color: #241a0f; }
+      .jar-chip.disabled { opacity: 0.55; pointer-events: none; }
+
       /* Уведомления */
       .toast {
         position: fixed;
@@ -710,7 +733,7 @@
         </div>
         <div
           data-pencil-name="панель продукта"
-          class="box-border w-full h-[500px] shrink-0 [box-shadow:0px_12px_30px_0px_#6B4A1810] flex flex-row gap-[48px] p-[40px] justify-start items-start bg-[#FFFDF7] [outline:1px_solid_#EFE3CB] [outline-offset:-0.5px] rounded-[24px]"
+          class="box-border w-full h-[560px] shrink-0 [box-shadow:0px_12px_30px_0px_#6B4A1810] flex flex-row gap-[48px] p-[40px] justify-start items-start bg-[#FFFDF7] [outline:1px_solid_#EFE3CB] [outline-offset:-0.5px] rounded-[24px]"
         >
           <div
             data-pencil-name="фото продукта"
@@ -830,6 +853,29 @@
               </div>
             </div>
             <div
+              data-pencil-name="выбор банки"
+              class="box-border w-full h-fit shrink-0 flex flex-row gap-[10px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="банка 1л"
+                data-size="1"
+                class="jar-chip on box-border [flex:1_1_0] h-fit flex flex-col gap-[2px] p-[12px_16px] justify-start items-start rounded-[14px]"
+              >
+                <div data-pencil-name="jb1" class="jt text-[15px]/[normal] box-border text-left [white-space:nowrap]">1 литр</div>
+                <div data-pencil-name="jp1" class="jpt text-[12px]/[normal] box-border text-left [white-space:nowrap]">750 ₽</div>
+                <div data-pencil-name="ja1" class="jav text-[12px]/[normal] box-border text-left [white-space:nowrap]">В наличии: 100 шт</div>
+              </div>
+              <div
+                data-pencil-name="банка 3л"
+                data-size="3"
+                class="jar-chip box-border [flex:1_1_0] h-fit flex flex-col gap-[2px] p-[12px_16px] justify-start items-start rounded-[14px]"
+              >
+                <div data-pencil-name="jb2" class="jt text-[15px]/[normal] box-border text-left [white-space:nowrap]">3 литра</div>
+                <div data-pencil-name="jp3" class="jpt text-[12px]/[normal] box-border text-left [white-space:nowrap]">2 200 ₽</div>
+                <div data-pencil-name="ja3" class="jav text-[12px]/[normal] box-border text-left [white-space:nowrap]">В наличии: 50 шт</div>
+              </div>
+            </div>
+            <div
               data-pencil-name="цена и количество"
               class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[10px_0px_4px_0px] justify-between items-center"
             >
@@ -841,13 +887,13 @@
                   data-pencil-name="сумма"
                   class="text-[42px]/[normal] box-border text-[#2B1D0E] font-['Playfair_Display',system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
                 >
-                  550 ₽
+                  750 ₽
                 </div>
                 <div
                   data-pencil-name="ед"
                   class="text-[15px]/[normal] box-border text-[#97836A] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
                 >
-                  / кг
+                  · банка 1 л
                 </div>
               </div>
               <div
@@ -869,7 +915,7 @@
                   data-pencil-name="кг"
                   class="text-[15px]/[normal] box-border text-[#2B1D0E] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
                 >
-                  1 кг
+                  1 банка
                 </div>
                 <div
                   data-pencil-name="плюс"
@@ -892,7 +938,7 @@
                 data-pencil-name="т"
                 class="text-[16px]/[normal] box-border text-[#241A0F] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
               >
-                Добавить в корзину · 550 ₽/кг
+                Добавить в корзину · 750 ₽
               </div>
             </div>
             <div
@@ -2160,28 +2206,86 @@
           toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3200);
         };
 
-        // Степпер количества и цена
-        var kg = 1;
+        // Степпер количества, выбор банки (1 л / 3 л) и остатки
+        var JAR_DEFAULTS = HoneyContent.JARS;
+        var jarInfo = {};
+        Object.keys(JAR_DEFAULTS).forEach(function (k) {
+          var j = (siteData.jars && siteData.jars[k]) || {};
+          jarInfo[k] = {
+            price: Number(j.price) > 0 ? Number(j.price) : JAR_DEFAULTS[k].price,
+            stock: j.stock != null && j.stock !== '' ? Math.max(0, Number(j.stock)) : null
+          };
+        });
+        var size = '1';
+        var count = 1;
         var minusBtn = document.querySelector('[data-pencil-name="минус"]');
         var plusBtn = document.querySelector('[data-pencil-name="плюс"]');
         var kgEl = document.querySelector('[data-pencil-name="кг"]');
         var priceEl = document.querySelector('[data-pencil-name="сумма"]');
+        var edEl = document.querySelector('[data-pencil-name="ед"]');
         var cartBtn = document.querySelector('[data-pencil-name="кнопка корзины"]');
         var cartLabel = cartBtn ? cartBtn.querySelector('*') : null;
+        var chips = document.querySelectorAll('.jar-chip');
         var pop = function (el) {
           if (!el) return;
           el.classList.remove('price-pop');
           void el.offsetWidth;
           el.classList.add('price-pop');
         };
-        var render = function () {
-          if (kgEl) kgEl.textContent = kg + ' кг';
-          if (priceEl) priceEl.textContent = fmt(PRICE * kg) + ' ₽';
-          if (cartLabel) cartLabel.textContent = 'Добавить в корзину · ' + fmt(PRICE * kg) + ' ₽';
-          if (minusBtn) minusBtn.style.opacity = kg === 1 ? '0.45' : '1';
+        var pluralJars = function (n) {
+          var m10 = n % 10, m100 = n % 100;
+          if (m10 === 1 && m100 !== 11) return n + ' банка';
+          if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return n + ' банки';
+          return n + ' банок';
         };
-        if (minusBtn) minusBtn.addEventListener('click', function () { if (kg > 1) { kg--; render(); pop(priceEl); pop(kgEl); } });
-        if (plusBtn) plusBtn.addEventListener('click', function () { if (kg < 20) { kg++; render(); pop(priceEl); pop(kgEl); } });
+        var stockOf = function (s) { return jarInfo[s].stock; };
+        var inStock = function (s) { return stockOf(s) === null || stockOf(s) > 0; };
+        var maxCount = function () {
+          var s = stockOf(size);
+          return s === null ? 20 : Math.max(0, Math.min(s, 20));
+        };
+        var render = function () {
+          var price = jarInfo[size].price * count;
+          var avail = inStock(size);
+          if (kgEl) kgEl.textContent = pluralJars(count);
+          if (priceEl) priceEl.textContent = fmt(price) + ' ₽';
+          if (edEl) edEl.textContent = '· банка ' + size + ' л';
+          if (cartBtn) {
+            cartBtn.style.opacity = avail ? '1' : '0.55';
+            cartBtn.style.pointerEvents = avail ? 'auto' : 'none';
+            if (cartLabel) cartLabel.textContent = avail ? 'Добавить в корзину · ' + fmt(price) + ' ₽' : 'Нет в наличии';
+          }
+          if (minusBtn) minusBtn.style.opacity = count === 1 ? '0.45' : '1';
+          if (plusBtn) plusBtn.style.opacity = count >= maxCount() ? '0.45' : '1';
+          chips.forEach(function (c) {
+            var s = c.getAttribute('data-size');
+            var on = s === size;
+            c.classList.toggle('on', on);
+            c.classList.toggle('disabled', !inStock(s));
+            var jp = c.querySelector('[data-pencil-name^="jp"]');
+            var ja = c.querySelector('[data-pencil-name^="ja"]');
+            if (jp) jp.textContent = fmt(jarInfo[s].price) + ' ₽';
+            if (ja) {
+              if (!inStock(s)) { ja.textContent = 'Нет в наличии'; ja.classList.add('out'); }
+              else if (stockOf(s) === null) { ja.textContent = 'В наличии'; ja.classList.remove('out'); }
+              else { ja.textContent = 'В наличии: ' + fmt(stockOf(s)) + ' шт'; ja.classList.remove('out'); }
+            }
+          });
+        };
+        chips.forEach(function (c) {
+          c.addEventListener('click', function () {
+            var s = c.getAttribute('data-size');
+            if (!inStock(s)) return;
+            size = s;
+            var max = maxCount();
+            if (count > max) count = Math.max(1, max);
+            render();
+            pop(priceEl);
+            pop(kgEl);
+          });
+        });
+        if (minusBtn) minusBtn.addEventListener('click', function () { if (count > 1) { count--; render(); pop(priceEl); pop(kgEl); } });
+        if (plusBtn) plusBtn.addEventListener('click', function () { if (count < maxCount()) { count++; render(); pop(priceEl); pop(kgEl); } });
 
         // Корзина
         var cart = 0;
@@ -2195,7 +2299,8 @@
         }
         if (cartBtn) {
           cartBtn.addEventListener('click', function () {
-            cart += kg;
+            if (!inStock(size)) return;
+            cart += count;
             if (badge) {
               badge.textContent = cart;
               badge.classList.add('show');
@@ -2203,8 +2308,8 @@
               void badge.offsetWidth;
               badge.classList.add('bump');
             }
-            cartLabel.textContent = 'В корзине · ' + kg + ' кг';
-            toast('Добавлено в корзину: ' + kg + ' кг цветочного мёда — ' + fmt(PRICE * kg) + ' ₽');
+            cartLabel.textContent = 'В корзине · ' + pluralJars(count);
+            toast('Добавлено в корзину: ' + pluralJars(count) + ' мёда (банка ' + size + ' л) — ' + fmt(jarInfo[size].price * count) + ' ₽');
             clearTimeout(cartBtn._t);
             cartBtn._t = setTimeout(render, 1500);
           });
@@ -2257,6 +2362,16 @@
             if (mt[it.key] && mt[it.key].trim()) it.el.textContent = mt[it.key];
           });
           PRICE = Number(data.price) || BASE_PRICE;
+          Object.keys(JAR_DEFAULTS).forEach(function (k) {
+            var j = (data.jars && data.jars[k]) || {};
+            jarInfo[k].price = Number(j.price) > 0 ? Number(j.price) : JAR_DEFAULTS[k].price;
+            jarInfo[k].stock = j.stock != null && j.stock !== '' ? Math.max(0, Number(j.stock)) : null;
+          });
+          if (!inStock(size)) {
+            size = Object.keys(JAR_DEFAULTS).filter(function (k) { return inStock(k); })[0] || '1';
+          }
+          var max = maxCount();
+          if (count > max) count = Math.max(1, max);
           EXTRA_NODES.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
           EXTRA_NODES = [];
           render();

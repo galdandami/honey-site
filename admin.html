@@ -160,17 +160,23 @@
 
       /* Цена */
       .price-card { background: linear-gradient(135deg, #fffdf7 0%, #fbf3dd 100%); }
-      .price-main { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .price-main { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
       .price-main input {
-        width: 150px;
+        width: 140px;
         border: 1.5px solid #e5d6ae;
         border-radius: 12px;
-        padding: 12px 16px;
-        font: 700 22px Inter, sans-serif;
+        padding: 10px 14px;
+        font: 700 18px Inter, sans-serif;
         color: var(--ink);
         background: #fff;
       }
       .price-main input:focus { outline: 0; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(224,154,43,.2); }
+      .price-field {
+        display: flex; flex-direction: column; gap: 4px;
+        font-size: 11px; font-weight: 700; color: var(--muted);
+        text-transform: uppercase; letter-spacing: .5px;
+      }
+      .price-field .pf-sub { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
       .price-hint { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; min-width: 180px; }
       .price-tag { font: 700 22px Inter, sans-serif; color: var(--amber); }
 
@@ -461,9 +467,17 @@
         // ---------- Работа с состоянием ----------
         function freshState(saved) {
           saved = saved || H.defaults();
+          var jars = {};
+          Object.keys(H.JARS).forEach(function (k) {
+            var j = (saved.jars && saved.jars[k]) || {};
+            var p = Number(j.price) > 0 ? Number(j.price) : null;
+            var s = j.stock != null && j.stock !== '' ? Math.max(0, Number(j.stock)) : null;
+            jars[k] = { price: p, stock: s };
+          });
           return {
             texts: Object.assign({}, saved.texts),
             price: saved.price,
+            jars: jars,
             extras: (saved.extras || []).map(function (e) {
               return { author: e.author || '', city: e.city || '', quote: e.quote || '' };
             })
@@ -506,12 +520,21 @@
             html += '<div class="cloud-banner"><b>Облако не настроено</b>Правки сохраняются только в этом браузере. Чтобы синхронизировать сайт между устройствами, заполните supabase-config.js и выполните supabase/schema.sql в своём проекте Supabase.</div>';
           }
 
-          // Цена
-          var priceVal = state.price || H.BASE_PRICE;
-          html += '<div class="card price-card' + (openSections.__price !== false ? ' open' : '') + '"><div class="card-head" data-toggle="__price"><h2>Цена за кг</h2><span class="cnt">₽</span><span class="caret">▼</span></div>';
+          // Банки: цена и наличие
+          html += '<div class="card price-card' + (openSections.__price !== false ? ' open' : '') + '"><div class="card-head" data-toggle="__price"><h2>Банки: цена и наличие</h2><span class="cnt">₽ / шт</span><span class="caret">▼</span></div>';
           html += '<div class="card-body" id="priceBody"><div class="price-main">';
-          html += '<input type="number" id="priceInput" value="' + priceVal + '" min="1" step="1" /><span class="price-tag">₽ / кг</span>';
-          html += '<span class="price-hint">Цена на сайте, в корзине и степпере пересчитается автоматически.</span></div></div></div>';
+          Object.keys(H.JARS).forEach(function (k) {
+            var j = state.jars[k] || {};
+            var pv = j.price || H.JARS[k].price;
+            var sv = j.stock != null ? j.stock : '';
+            html += '<label class="price-field"><span>Банка ' + k + ' л</span>';
+            html += '<input type="number" id="price' + k + '" value="' + pv + '" min="1" step="10" />';
+            html += '<span class="pf-sub">Цена, ₽</span></label>';
+            html += '<label class="price-field"><span>В наличии</span>';
+            html += '<input type="number" id="stock' + k + '" value="' + sv + '" min="0" step="1" placeholder="—" />';
+            html += '<span class="pf-sub">шт. Пусто = без ограничения</span></label>';
+          });
+          html += '<span class="price-hint">Цены и остатки показываются в блоке товара. При «Нет в наличии» банка не заказывается.</span></div></div></div>';
           openSections.__price = openSections.__price !== undefined ? openSections.__price : true;
 
           // Секции
@@ -570,11 +593,19 @@
             });
           });
 
-          var priceInput = document.getElementById('priceInput');
-          if (priceInput) priceInput.addEventListener('input', function () {
-            var p = parseFloat(priceInput.value);
-            state.price = (p > 0) ? p : null;
-            markDirty();
+          Object.keys(H.JARS).forEach(function (k) {
+            var priceInput = document.getElementById('price' + k);
+            if (priceInput) priceInput.addEventListener('input', function () {
+              var p = parseFloat(priceInput.value);
+              state.jars[k].price = (p > 0) ? p : null;
+              markDirty();
+            });
+            var stockInput = document.getElementById('stock' + k);
+            if (stockInput) stockInput.addEventListener('input', function () {
+              var s = parseInt(stockInput.value, 10);
+              state.jars[k].stock = (s >= 0 && stockInput.value !== '') ? s : null;
+              markDirty();
+            });
           });
 
           editor.querySelectorAll('textarea').forEach(function (ta) {
