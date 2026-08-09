@@ -10,442 +10,732 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="editable-content.js"></script>
     <style>
       * { box-sizing: border-box; }
+      :root {
+        --ink: #2b1d0e;
+        --muted: #97836a;
+        --line: #efe3cb;
+        --paper: #fffdf7;
+        --bg: #f2ecdd;
+        --amber: #e09a2b;
+        --green: #5f7f4f;
+        --red: #7a2e2e;
+      }
+      html, body { height: 100%; }
       body {
         margin: 0;
         font-family: Inter, system-ui, sans-serif;
-        background: #f6f1e6;
-        color: #2b1d0e;
+        background: var(--bg);
+        color: var(--ink);
       }
+      button { font-family: inherit; }
+
+      /* ---------- Шапка ---------- */
       header {
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 20;
         display: flex;
         align-items: center;
-        gap: 14px;
-        padding: 14px 24px;
+        gap: 12px;
+        padding: 10px 20px;
         background: #241a0f;
         color: #f3e6c9;
+        box-shadow: 0 2px 14px rgba(0,0,0,.25);
       }
       .logo {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        background: #e09a2b;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font: 700 18px Playfair Display, serif;
+        width: 38px; height: 38px;
+        border-radius: 11px;
+        background: var(--amber);
+        display: flex; align-items: center; justify-content: center;
+        font: 700 17px 'Playfair Display', serif;
         color: #241a0f;
         flex-shrink: 0;
       }
-      .htitle {
-        font: 600 18px Playfair Display, serif;
-        margin: 0;
+      .htitles { min-width: 0; }
+      .htitle { font: 600 16px 'Playfair Display', serif; margin: 0; }
+      .hsub { font-size: 11.5px; color: #a99572; margin-top: 2px; }
+      .conn {
+        display: flex; align-items: center; gap: 7px;
+        font-size: 12px; color: #a99572;
+        background: #3a2c18; border-radius: 9999px;
+        padding: 6px 13px;
+        white-space: nowrap;
       }
-      .hsub { font-size: 12px; color: #a99572; margin-top: 2px; }
+      .conn .dot { width: 8px; height: 8px; border-radius: 50%; background: #8a7a5f; flex-shrink: 0; }
+      .conn.ok { color: #cfdcbf; }
+      .conn.ok .dot { background: #9dc07e; box-shadow: 0 0 8px rgba(157,192,126,.8); }
+      .conn.err { color: #e0b7b7; }
+      .conn.err .dot { background: #d97e6c; }
+      .conn.off .dot { background: #d9c9a3; }
       .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-      .actions a, .actions button, .file-label {
+      .btn {
         font: 600 13px Inter, sans-serif;
-        padding: 9px 16px;
+        padding: 8px 15px;
         border-radius: 9999px;
         cursor: pointer;
         border: 0;
         text-decoration: none;
-        display: inline-block;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s;
       }
-      .actions a:hover, .actions button:hover, .file-label:hover { transform: translateY(-1px); }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:active { transform: translateY(0) scale(.97); }
       .btn-ghost { background: #3a2c18; color: #e8d9b8; }
       .btn-ghost:hover { background: #46351c; }
-      .btn-amber { background: #e09a2b; color: #241a0f; font-weight: 700; }
-      .btn-amber:hover { box-shadow: 0 8px 20px rgba(224, 154, 43, 0.4); }
       .btn-danger { background: #7a2e2e; color: #f3e6c9; }
+      .btn-danger:hover { background: #8d3838; }
+      .btn-amber { background: var(--amber); color: #241a0f; font-weight: 700; }
+      .btn-amber:hover { box-shadow: 0 8px 18px rgba(224,154,43,.45); }
+      .btn-amber:disabled { opacity: .55; cursor: default; box-shadow: none; transform: none; }
       .file-input { display: none; }
 
+      /* ---------- Раскладка ---------- */
       .wrap {
         display: grid;
-        grid-template-columns: 480px 1fr;
-        height: calc(100vh - 68px);
+        grid-template-columns: minmax(380px, 560px) 1fr;
+        height: calc(100vh - 60px);
       }
       .editor {
         overflow-y: auto;
-        padding: 18px 16px 90px;
-        border-right: 1px solid #efe3cb;
+        padding: 16px 16px 120px;
+        border-right: 1px solid var(--line);
         background: #faf6ec;
+        scroll-behavior: smooth;
       }
+
+      /* ---------- Поиск ---------- */
+      .searchbox { position: sticky; top: 0; z-index: 5; padding: 0 0 12px; background: linear-gradient(#faf6ec 80%, rgba(250,246,236,0)); }
+      .searchbox input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 14px 10px 38px;
+        font: 13.5px Inter, sans-serif;
+        color: var(--ink);
+        background: #fffdf7 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2397836a" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>') no-repeat 13px center;
+        box-shadow: 0 4px 14px rgba(107,74,24,.07);
+      }
+      .searchbox input:focus { outline: 0; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(224,154,43,.2); }
+
+      /* ---------- Карточки ---------- */
       .card {
-        background: #fffdf7;
-        border: 1px solid #efe3cb;
+        background: var(--paper);
+        border: 1px solid var(--line);
         border-radius: 16px;
-        padding: 16px;
-        margin-bottom: 14px;
-        box-shadow: 0 2px 10px rgba(107, 74, 24, 0.06);
+        margin-bottom: 12px;
+        box-shadow: 0 2px 10px rgba(107,74,24,.06);
+        overflow: hidden;
       }
-      .card h2 {
-        margin: 0 0 12px;
-        font: 600 17px Playfair Display, serif;
-        color: #2b1d0e;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      .card-head {
+        display: flex; align-items: center; gap: 8px;
+        padding: 12px 16px;
+        cursor: pointer;
+        user-select: none;
       }
-      .card h2 .cnt {
+      .card-head:hover { background: #fbf7ef; }
+      .card-head h2 { margin: 0; font: 600 15px 'Playfair Display', serif; display: flex; align-items: center; gap: 8px; }
+      .card-head .caret { margin-left: auto; transition: transform .2s ease; color: var(--muted); font-size: 11px; }
+      .card.open .card-head .caret { transform: rotate(180deg); }
+      .card-head .changed-badge {
         font: 11px Inter, sans-serif;
-        color: #97836a;
+        color: #fff; background: var(--amber);
+        border-radius: 9999px; padding: 2px 8px;
+      }
+      .cnt {
+        font: 11px Inter, sans-serif;
+        color: var(--muted);
         background: #f2e6c8;
         border-radius: 9999px;
         padding: 2px 8px;
       }
-      .row { margin-bottom: 10px; }
-      .row label {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        font-size: 11px;
-        font-weight: 700;
-        color: #97836a;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        margin-bottom: 4px;
-      }
-      .row label .reset {
-        color: #b97a12;
-        cursor: pointer;
-        text-transform: none;
-        letter-spacing: 0;
-        font-weight: 600;
-      }
-      .row label .reset:hover { text-decoration: underline; }
-      .row textarea, .row input[type="text"], .row input[type="number"] {
-        width: 100%;
-        border: 1px solid #efe3cb;
-        border-radius: 10px;
-        padding: 9px 11px;
-        font: 13px/1.5 Inter, sans-serif;
-        color: #2b1d0e;
-        background: #fffdf7;
-        resize: vertical;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      }
-      .row textarea:focus, .row input:focus {
-        outline: 0;
-        border-color: #e09a2b;
-        box-shadow: 0 0 0 3px rgba(224, 154, 43, 0.18);
-      }
-      .price-wrap { display: flex; align-items: center; gap: 10px; }
-      .price-wrap input { max-width: 140px; font-size: 18px; font-weight: 700; }
-      .price-hint { font-size: 12px; color: #97836a; }
+      .card-body { display: none; padding: 2px 16px 16px; }
+      .card.open .card-body { display: block; }
 
-      .extras .extra {
-        border: 1px solid #efe3cb;
+      /* Цена */
+      .price-card { background: linear-gradient(135deg, #fffdf7 0%, #fbf3dd 100%); }
+      .price-main { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .price-main input {
+        width: 150px;
+        border: 1.5px solid #e5d6ae;
         border-radius: 12px;
-        padding: 10px;
+        padding: 12px 16px;
+        font: 700 22px Inter, sans-serif;
+        color: var(--ink);
+        background: #fff;
+      }
+      .price-main input:focus { outline: 0; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(224,154,43,.2); }
+      .price-hint { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; min-width: 180px; }
+      .price-tag { font: 700 22px Inter, sans-serif; color: var(--amber); }
+
+      /* ---------- Ряды полей ---------- */
+      .row { margin-bottom: 12px; }
+      .row label {
+        display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        font-size: 11px; font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        margin-bottom: 5px;
+      }
+      .row label .lname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .row label .controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+      .row .dirty-dot { display: none; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+      .row.changed .dirty-dot { display: block; }
+      .row .reset {
+        color: #b97a12; cursor: pointer; font-weight: 600;
+        text-transform: none; letter-spacing: 0; font-size: 11.5px;
+      }
+      .row .reset:hover { text-decoration: underline; }
+      .row textarea, .row input[type="text"] {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 10px 12px;
+        font: 13.5px/1.55 Inter, sans-serif;
+        color: var(--ink);
+        background: #fff;
+        resize: none;
+        overflow: hidden;
+        min-height: 62px;
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+      }
+      .row input[type="text"] { min-height: auto; resize: none; }
+      .row textarea:focus, .row input[type="text"]:focus {
+        outline: 0; border-color: var(--amber);
+        box-shadow: 0 0 0 3px rgba(224,154,43,.18);
+      }
+      .row textarea:hover, .row input[type="text"]:hover { border-color: #ddcba6; }
+      .row.changed textarea { background: #fffaf0; border-color: #e8c987; }
+      .row.dimmed { opacity: .35; pointer-events: none; }
+
+      /* ---------- Доп. отзывы ---------- */
+      .extra {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
         margin-bottom: 10px;
         background: #fbf7ef;
+        transition: box-shadow .2s ease;
       }
-      .extra .grid3 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-      .extra .grid3 input { border: 1px solid #efe3cb; border-radius: 8px; padding: 8px 10px; font: 13px Inter, sans-serif; color: #2b1d0e; }
-      .extra .grid3 input:focus { outline: 0; border-color: #e09a2b; }
+      .extra:hover { box-shadow: 0 4px 14px rgba(107,74,24,.1); }
+      .extra .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+      .extra .grid2 input {
+        border: 1px solid var(--line); border-radius: 9px;
+        padding: 9px 11px; font: 13px Inter, sans-serif; color: var(--ink); background: #fff;
+      }
+      .extra .grid2 input:focus { outline: 0; border-color: var(--amber); }
       .extra textarea {
-        width: 100%;
-        border: 1px solid #efe3cb;
-        border-radius: 8px;
-        padding: 8px 10px;
-        font: 13px/1.5 Inter, sans-serif;
-        color: #2b1d0e;
-        resize: vertical;
+        width: 100%; border: 1px solid var(--line); border-radius: 9px;
+        padding: 9px 11px; font: 13px/1.5 Inter, sans-serif; color: var(--ink);
+        resize: vertical; background: #fff; min-height: 66px;
       }
       .extra .rs { display: flex; justify-content: flex-end; margin-top: 6px; }
       .extra .rs button {
         font: 600 12px Inter, sans-serif;
-        color: #7a2e2e;
-        background: transparent;
-        border: 0;
-        cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 8px;
+        color: var(--red);
+        background: transparent; border: 0; cursor: pointer;
+        padding: 5px 10px; border-radius: 8px;
       }
       .extra .rs button:hover { background: #f7e8e4; }
       .add-btn {
-        width: 100%;
-        padding: 10px;
-        border: 1px dashed #d8c49a;
-        border-radius: 10px;
-        background: transparent;
-        color: #b97a12;
-        font: 600 13px Inter, sans-serif;
-        cursor: pointer;
-        transition: background 0.2s ease;
+        width: 100%; padding: 10px;
+        border: 1.5px dashed #d8c49a; border-radius: 12px;
+        background: transparent; color: #b97a12;
+        font: 600 13px Inter, sans-serif; cursor: pointer;
+        transition: background .2s ease;
       }
       .add-btn:hover { background: #f9f1dd; }
 
-      .status { font-size: 12px; color: #a99572; margin-top: 8px; text-align: center; }
+      /* Баннер "облако не настроено" */
+      .cloud-banner {
+        display: flex; gap: 10px; align-items: flex-start;
+        background: #fdf3d9; border: 1px solid #ecd39a;
+        border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+        font-size: 12.5px; line-height: 1.55; color: #7a5b1e;
+      }
+      .cloud-banner b { display: block; margin-bottom: 2px; }
 
+      /* ---------- Панель сохранения ---------- */
       .savebar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 480px;
-        padding: 12px 16px;
-        background: linear-gradient(to top, #faf6ec 70%, rgba(250, 246, 236, 0));
-        text-align: center;
-        z-index: 9;
-      }
-      .savebar button {
+        position: fixed; bottom: 0; left: 0;
         width: 100%;
-        padding: 13px;
-        border: 0;
-        border-radius: 9999px;
-        background: #e09a2b;
-        color: #241a0f;
-        font: 700 15px Inter, sans-serif;
-        cursor: pointer;
-        box-shadow: 0 10px 26px rgba(224, 154, 43, 0.35);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        max-width: 560px;
+        padding: 12px 16px 14px;
+        background: linear-gradient(to top, #faf6ec 78%, rgba(250,246,236,0));
+        z-index: 15;
       }
-      .savebar button:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(224, 154, 43, 0.45); }
-      .savebar button:active { transform: scale(0.98); }
+      .savebar-inner {
+        display: flex; gap: 10px; align-items: center;
+        background: #fffdf7; border: 1px solid var(--line);
+        border-radius: 16px; padding: 10px 10px 10px 16px;
+        box-shadow: 0 10px 30px rgba(36,26,15,.18);
+      }
+      .save-status { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; }
+      .save-status b { color: var(--ink); font-weight: 600; }
+      .save-status .err { color: var(--red); }
+      .save-status .sync { color: var(--green); }
+      .autosave { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+      .switch { position: relative; width: 34px; height: 19px; flex-shrink: 0; }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .switch .slider {
+        position: absolute; inset: 0; border-radius: 9999px;
+        background: #d8cba8; transition: background .2s ease; cursor: pointer;
+      }
+      .switch .slider::before {
+        content: ''; position: absolute; width: 13px; height: 13px;
+        left: 3px; top: 3px; border-radius: 50%; background: #fff;
+        transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+      }
+      .switch input:checked + .slider { background: var(--green); }
+      .switch input:checked + .slider::before { transform: translateX(15px); }
 
+      /* ---------- Превью ---------- */
       .preview {
-        overflow: auto;
-        padding: 16px;
+        display: flex; flex-direction: column;
+        min-width: 0;
+        background: #e4dcc8;
+      }
+      .preview-bar {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 14px;
         background: #ece4d2;
+        border-bottom: 1px solid #ddd2b8;
+        font-size: 12px; color: var(--muted);
       }
-      .preview-note {
-        font-size: 12px;
-        color: #97836a;
-        margin-bottom: 8px;
+      .preview-bar .spacer { flex: 1; }
+      .zoom-btn {
+        background: #fffdf7; border: 1px solid var(--line);
+        border-radius: 8px; padding: 4px 9px;
+        font: 600 12px Inter, sans-serif; color: var(--ink);
+        cursor: pointer;
       }
+      .zoom-btn.active { background: var(--amber); color: #241a0f; border-color: var(--amber); }
+      .pv-scroll { flex: 1; overflow: auto; padding: 18px; }
       .pv-wrap {
-        width: 691px;
-        height: 1938px;
+        width: 691px; height: 1938px;
         overflow: hidden;
-        transform: scale(0.48);
         transform-origin: top left;
-        box-shadow: 0 12px 40px rgba(36, 26, 15, 0.25);
+        box-shadow: 0 12px 40px rgba(36,26,15,.25);
+        transition: width .2s ease, height .2s ease;
       }
-      .pv-wrap iframe {
-        width: 1440px;
-        height: 4037px;
-        border: 0;
-        pointer-events: none;
-        background: #fff;
-      }
+      .pv-wrap iframe { width: 1440px; height: 4037px; border: 0; pointer-events: none; background: #fff; }
 
+      /* ---------- Тосты ---------- */
       .toast {
-        position: fixed;
-        bottom: 90px;
-        left: 50%;
+        position: fixed; bottom: 84px; left: 50%;
         transform: translate(-50%, 20px);
-        padding: 13px 24px;
-        border-radius: 9999px;
-        background: #241a0f;
-        color: #f3e6c9;
-        font: 600 14px Inter, sans-serif;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease, transform 0.3s ease;
+        padding: 12px 22px; border-radius: 9999px;
+        background: #241a0f; color: #f3e6c9;
+        font: 600 13.5px Inter, sans-serif;
+        box-shadow: 0 12px 30px rgba(0,0,0,.3);
+        opacity: 0; pointer-events: none;
+        transition: opacity .3s ease, transform .3s ease;
         z-index: 99;
+        max-width: calc(100vw - 40px);
+        text-align: center;
       }
       .toast.show { opacity: 1; transform: translate(-50%, 0); }
-      .toast.error { background: #7a2e2e; }
+      .toast.error { background: var(--red); }
 
       .err {
-        padding: 24px;
-        text-align: center;
-        color: #7a2e2e;
-        font-size: 14px;
-        line-height: 1.6;
+        padding: 24px; text-align: center;
+        color: var(--red); font-size: 14px; line-height: 1.6;
       }
+      .nosearch { text-align: center; color: var(--muted); font-size: 13px; padding: 20px 0 10px; }
 
       @media (max-width: 1100px) {
         .wrap { grid-template-columns: 1fr; height: auto; }
         .editor { border-right: 0; }
         .preview { display: none; }
-        .savebar { width: 100%; }
+        .savebar { max-width: none; }
+        .conn { display: none; }
       }
     </style>
   </head>
   <body>
     <header>
       <div class="logo">М</div>
-      <div>
+      <div class="htitles">
         <p class="htitle">Админ-панель · Мёд Камского Устья</p>
-        <div class="hsub">Редактирование текстов, цены и отзывов лендинга</div>
+        <div class="hsub">Тексты, цена и отзывы лендинга</div>
+      </div>
+      <div class="conn off" id="connBadge" title="Статус синхронизации с облаком">
+        <span class="dot"></span><span id="connText">Облако…</span>
       </div>
       <div class="actions">
-        <a class="btn-ghost" href="index.html" title="Открыть сайт">Открыть сайт</a>
-        <button class="btn-ghost" id="exportBtn">Экспорт JSON</button>
-        <label class="btn-ghost file-label" for="importFile">Импорт JSON</label>
+        <a class="btn btn-ghost" href="index.html" title="Открыть сайт">Открыть сайт</a>
+        <button class="btn btn-ghost" id="syncBtn" title="Забрать последнюю версию из облака">Синхронизировать</button>
+        <button class="btn btn-ghost" id="exportBtn">Экспорт JSON</button>
+        <label class="btn btn-ghost" for="importFile">Импорт</label>
         <input class="file-input" id="importFile" type="file" accept="application/json" />
-        <button class="btn-danger" id="resetBtn">Сбросить</button>
-        <button class="btn-amber" id="saveBtn">Сохранить</button>
+        <button class="btn btn-danger" id="resetBtn">Сбросить</button>
+        <button class="btn btn-amber" id="saveBtn">Сохранить</button>
       </div>
     </header>
 
     <div class="wrap">
       <div class="editor" id="editor"></div>
       <div class="preview">
-        <div class="preview-note">Предпросмотр сайта — обновляется после сохранения</div>
-        <div class="pv-wrap"><iframe id="preview" src="index.html"></iframe></div>
+        <div class="preview-bar">
+          <span>Живой предпросмотр</span>
+          <span class="spacer"></span>
+          <span id="pvState">—</span>
+          <button class="zoom-btn" data-zoom="0.4">40%</button>
+          <button class="zoom-btn active" data-zoom="0.48">48%</button>
+          <button class="zoom-btn" data-zoom="0.6">60%</button>
+        </div>
+        <div class="pv-scroll"><div class="pv-wrap" id="pvWrap"><iframe id="preview" src="index.html"></iframe></div></div>
       </div>
     </div>
 
-    <div class="savebar"><button id="saveBtn2">Сохранить изменения</button></div>
+    <div class="savebar">
+      <div class="savebar-inner">
+        <div class="save-status" id="saveStatus"><b>Загрузка…</b></div>
+        <label class="autosave" title="Сохранять автоматически после каждой правки">
+          <span class="switch"><input type="checkbox" id="autoSave" checked /><span class="slider"></span></span>
+          Авто
+        </label>
+        <button class="btn btn-amber" id="saveBtn2">Сохранить</button>
+      </div>
+    </div>
     <div class="toast" id="toast"></div>
 
     <script>
       (function () {
+        var H = HoneyContent;
         var iframe = document.getElementById('preview');
         var editor = document.getElementById('editor');
-        var priceInput = null;
-        var extrasWrap = null;
         var state = null;
         var items = [];
+        var byKey = {};
+        var search = '';
+        var openSections = {};
+        var autoSave = true;
+        var dirty = false;
+        var lastSavedAt = null;
+        var cloudOk = false;
+
+        var saveTimer = null;
+        var pvTimer = null;
 
         var toastEl = document.getElementById('toast');
         var toastTimer = null;
-        function toast(msg, error) {
+        function toast(msg, error, ms) {
           toastEl.textContent = msg;
           toastEl.classList.toggle('error', !!error);
           toastEl.classList.add('show');
           clearTimeout(toastTimer);
-          toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+          toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, ms || 2600);
         }
 
-        function resetState() {
-          state = { texts: {}, price: null, extras: [] };
+        // ---------- Статусы ----------
+        function setConn(mode, text) {
+          var b = document.getElementById('connBadge');
+          b.className = 'conn ' + (mode === 'ok' ? 'ok' : mode === 'err' ? 'err' : 'off');
+          document.getElementById('connText').textContent = text;
+        }
+
+        function renderSaveStatus() {
+          var el = document.getElementById('saveStatus');
+          var parts = [];
+          if (dirty) { parts.push('<b>Есть несохранённые изменения</b>'); }
+          else if (lastSavedAt) { parts.push('<b>Сохранено</b> ' + lastSavedAt); }
+          else { parts.push('<b>Загрузка…</b>'); }
+          if (H.isConfigured()) {
+            parts.push(cloudOk
+              ? '<span class="sync">· облако ✓</span>'
+              : '<span class="err">· облако не подключено</span>');
+          } else {
+            parts.push('<span class="err">· локальный режим</span>');
+          }
+          el.innerHTML = parts.join(' ');
+        }
+
+        // ---------- Работа с состоянием ----------
+        function freshState(saved) {
+          saved = saved || H.defaults();
+          return {
+            texts: Object.assign({}, saved.texts),
+            price: saved.price,
+            extras: (saved.extras || []).map(function (e) {
+              return { author: e.author || '', city: e.city || '', quote: e.quote || '' };
+            })
+          };
         }
 
         function collectFromSite() {
           try {
             var doc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!doc) return null;
-            items = HoneyContent.collect(doc);
-            return items;
-          } catch (e) {
-            return null;
-          }
+            if (!doc) return false;
+            items = H.collect(doc);
+            byKey = {};
+            items.forEach(function (it) { byKey[it.key] = it; });
+            return true;
+          } catch (e) { return false; }
+        }
+
+        function reloadStateFromCache() {
+          state = freshState(H.load());
+          dirty = false;
+        }
+
+        // ---------- Сборка редактора ----------
+        function escHtml(s) {
+          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function buildEditor() {
           if (!items.length) {
-            editor.innerHTML = '<div class="err">Не удалось прочитать содержимое сайта. Откройте эту страницу в Chrome или Edge (превью подключится к index.html автоматически).</div>';
+            editor.innerHTML = '<div class="err">Не удалось прочитать содержимое сайта.<br/>Откройте эту страницу в Chrome или Edge — превью подключается к index.html автоматически.</div>';
             return;
           }
+          var term = search.trim().toLowerCase();
           var html = '';
-          html += '<div class="card"><h2>Цена <span class="cnt">за кг</span></h2>';
-          html += '<div class="price-wrap"><input type="number" id="priceInput" value="' + (state.price || HoneyContent.BASE_PRICE) + '" min="1" step="1" /><span class="price-hint">₽ за килограмм. Цена на сайте, в корзине и степпере пересчитается автоматически.</span></div></div>';
 
+          html += '<div class="searchbox"><input type="text" id="search" placeholder="Поиск по полям и текстам…" value="' + escHtml(search) + '" /></div>';
+
+          // Баннер про облако
+          if (!H.isConfigured()) {
+            html += '<div class="cloud-banner"><b>Облако не настроено</b>Правки сохраняются только в этом браузере. Чтобы синхронизировать сайт между устройствами, заполните supabase-config.js и выполните supabase/schema.sql в своём проекте Supabase.</div>';
+          }
+
+          // Цена
+          var priceVal = state.price || H.BASE_PRICE;
+          html += '<div class="card price-card' + (openSections.__price !== false ? ' open' : '') + '"><div class="card-head" data-toggle="__price"><h2>Цена за кг</h2><span class="cnt">₽</span><span class="caret">▼</span></div>';
+          html += '<div class="card-body" id="priceBody"><div class="price-main">';
+          html += '<input type="number" id="priceInput" value="' + priceVal + '" min="1" step="1" /><span class="price-tag">₽ / кг</span>';
+          html += '<span class="price-hint">Цена на сайте, в корзине и степпере пересчитается автоматически.</span></div></div></div>';
+          openSections.__price = openSections.__price !== undefined ? openSections.__price : true;
+
+          // Секции
           var bySection = {};
+          var sectionChanged = {};
           items.forEach(function (it) {
             (bySection[it.section] = bySection[it.section] || []).push(it);
           });
-          HoneyContent.SECTIONS.forEach(function (sec) {
+          var foundAny = false;
+
+          H.SECTIONS.forEach(function (sec) {
             var list = bySection[sec] || [];
             if (!list.length) return;
-            html += '<div class="card"><h2>' + sec + ' <span class="cnt">' + list.length + '</span></h2>';
+            var changed = 0;
+            var rows = '';
             list.forEach(function (it) {
               var val = (state.texts[it.key] !== undefined ? state.texts[it.key] : it.text);
-              html += '<div class="row" data-key="' + it.key + '"><label><span>' + (it.name || 'text') + '</span><span class="reset" data-reset="' + it.key + '">сбросить</span></label>';
-              html += '<textarea rows="2" data-key="' + it.key + '" data-original="' + escAttr(it.text) + '">' + escHtml(val) + '</textarea></div>';
+              var isChanged = state.texts[it.key] !== undefined && val !== it.text;
+              if (isChanged) changed++;
+              var hit = !term || (it.name || '').toLowerCase().indexOf(term) > -1 || it.text.toLowerCase().indexOf(term) > -1;
+              if (!hit) return;
+              foundAny = true;
+              rows += '<div class="row' + (isChanged ? ' changed' : '') + '" data-key="' + it.key + '">';
+              rows += '<label><span class="lname">' + escHtml(it.name || 'text') + '</span>';
+              rows += '<span class="controls"><span class="dirty-dot"></span><span class="reset" data-reset="' + it.key + '">сбросить</span></span></label>';
+              rows += '<textarea rows="2" data-key="' + it.key + '" data-original="' + escHtml(it.text) + '">' + escHtml(val) + '</textarea></div>';
             });
-            html += '</div>';
+            if (!rows) return;
+            sectionChanged[sec] = changed;
+
+            html += '<div class="card' + (openSections[sec] !== false ? ' open' : '') + '">';
+            html += '<div class="card-head" data-toggle="' + sec + '"><h2>' + escHtml(sec) + ' <span class="cnt">' + list.length + '</span></h2>';
+            if (changed) html += '<span class="changed-badge">' + changed + '</span>';
+            html += '<span class="caret">▼</span></div>';
+            html += '<div class="card-body">' + rows + '</div></div>';
           });
 
-          html += '<div class="card extras"><h2>Дополнительные отзывы <span class="cnt">' + state.extras.length + '</span></h2>';
-          html += '<div id="extrasWrap"></div>';
-          html += '<button class="add-btn" id="addExtra">+ Добавить отзыв</button></div>';
+          if (term && !foundAny) {
+            html += '<div class="nosearch">Ничего не найдено по запросу «' + escHtml(term) + '»</div>';
+          }
+
+          // Доп. отзывы
+          html += '<div class="card' + (openSections['__extras'] !== false ? ' open' : '') + '">';
+          html += '<div class="card-head" data-toggle="__extras"><h2>Дополнительные отзывы <span class="cnt">' + state.extras.length + '</span></h2><span class="caret">▼</span></div>';
+          html += '<div class="card-body" id="extrasBody"></div></div>';
 
           editor.innerHTML = html;
-          priceInput = document.getElementById('priceInput');
-          extrasWrap = document.getElementById('extrasWrap');
+
+          // Биндинги
+          editor.querySelectorAll('.card-head').forEach(function (h) {
+            h.addEventListener('click', function () {
+              var t = h.getAttribute('data-toggle');
+              var card = h.parentElement;
+              openSections[t] = !card.classList.contains('open');
+              card.classList.toggle('open');
+            });
+          });
+
+          var priceInput = document.getElementById('priceInput');
+          if (priceInput) priceInput.addEventListener('input', function () {
+            var p = parseFloat(priceInput.value);
+            state.price = (p > 0) ? p : null;
+            markDirty();
+          });
 
           editor.querySelectorAll('textarea').forEach(function (ta) {
+            autoGrow(ta);
             ta.addEventListener('input', function () {
+              autoGrow(ta);
               var key = ta.getAttribute('data-key');
               var orig = ta.getAttribute('data-original');
               var v = ta.value.trim();
               if (v === orig) { delete state.texts[key]; } else { state.texts[key] = v; }
+              ta.parentElement.classList.toggle('changed', state.texts[key] !== undefined && v !== orig);
+              markDirty();
             });
           });
+
           editor.querySelectorAll('[data-reset]').forEach(function (sp) {
             sp.addEventListener('click', function () {
               var key = sp.getAttribute('data-reset');
+              var it = byKey[key];
+              if (!it) return;
               delete state.texts[key];
               var ta = editor.querySelector('textarea[data-key="' + key + '"]');
-              if (ta) ta.value = items.filter(function (i) { return i.key === key; })[0].text;
+              if (ta) { ta.value = it.text; autoGrow(ta); ta.parentElement.classList.remove('changed'); }
+              markDirty();
+              toast('Поле сброшено к оригиналу');
+            });
+          });
+
+          buildExtras();
+
+          var searchInput = document.getElementById('search');
+          if (searchInput) searchInput.addEventListener('input', function () {
+            search = this.value;
+            buildEditor();
+          });
+        }
+
+        function autoGrow(ta) {
+          ta.style.height = 'auto';
+          ta.style.height = Math.max(62, ta.scrollHeight) + 'px';
+        }
+
+        function buildExtras() {
+          var wrap = document.getElementById('extrasBody');
+          if (!wrap) return;
+          var html = '';
+          state.extras.forEach(function (e, i) {
+            html += '<div class="extra"><div class="grid2">';
+            html += '<input type="text" placeholder="Имя" data-ef="author" data-idx="' + i + '" value="' + escHtml(e.author) + '" />';
+            html += '<input type="text" placeholder="Город" data-ef="city" data-idx="' + i + '" value="' + escHtml(e.city) + '" />';
+            html += '</div><textarea rows="2" placeholder="Текст отзыва" data-ef="quote" data-idx="' + i + '">' + escHtml(e.quote) + '</textarea>';
+            html += '<div class="rs"><button data-del="' + i + '">Удалить</button></div></div>';
+          });
+          html += '<button class="add-btn" id="addExtra">+ Добавить отзыв</button>';
+          wrap.innerHTML = html;
+
+          wrap.querySelectorAll('[data-ef]').forEach(function (inp) {
+            inp.addEventListener('input', function () {
+              state.extras[Number(inp.getAttribute('data-idx'))][inp.getAttribute('data-ef')] = inp.value;
+              markDirty();
+            });
+          });
+          wrap.querySelectorAll('[data-del]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              state.extras.splice(Number(b.getAttribute('data-del')), 1);
+              buildExtras();
+              var cnt = editor.querySelector('[data-toggle="__extras"] .cnt');
+              if (cnt) cnt.textContent = state.extras.length;
+              markDirty();
+              toast('Отзыв удалён');
             });
           });
           document.getElementById('addExtra').addEventListener('click', function () {
             state.extras.push({ author: '', city: '', quote: '' });
             buildExtras();
-          });
-          buildExtras();
-        }
-
-        function escHtml(s) {
-          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-        function escAttr(s) {
-          return escHtml(s).replace(/"/g, '&quot;');
-        }
-
-        function buildExtras() {
-          if (!extrasWrap) return;
-          var html = '';
-          state.extras.forEach(function (e, i) {
-            html += '<div class="extra"><div class="grid3">';
-            html += '<input type="text" placeholder="Имя" data-ef="author" data-idx="' + i + '" value="' + escAttr(e.author || '') + '" />';
-            html += '<input type="text" placeholder="Город" data-ef="city" data-idx="' + i + '" value="' + escAttr(e.city || '') + '" />';
-            html += '</div><textarea rows="2" placeholder="Текст отзыва" data-ef="quote" data-idx="' + i + '">' + escHtml(e.quote || '') + '</textarea>';
-            html += '<div class="rs"><button data-del="' + i + '">Удалить</button></div></div>';
-          });
-          extrasWrap.innerHTML = html || '<div class="status">Пока нет дополнительных отзывов — основные три можно редактировать в секции «Отзывы» выше.</div>';
-          extrasWrap.querySelectorAll('[data-ef]').forEach(function (inp) {
-            inp.addEventListener('input', function () {
-              state.extras[Number(inp.getAttribute('data-idx'))][inp.getAttribute('data-ef')] = inp.value;
-            });
-          });
-          extrasWrap.querySelectorAll('[data-del]').forEach(function (b) {
-            b.addEventListener('click', function () {
-              state.extras.splice(Number(b.getAttribute('data-del')), 1);
-              buildExtras();
-              var cnt = editor.querySelector('.extras .cnt');
-              if (cnt) cnt.textContent = state.extras.length;
-            });
+            var cnt = editor.querySelector('[data-toggle="__extras"] .cnt');
+            if (cnt) cnt.textContent = state.extras.length;
+            markDirty();
+            toast('Отзыв добавлен — заполните поля');
           });
         }
 
-        function save() {
-          var p = parseFloat(priceInput ? priceInput.value : '');
-          state.price = (p > 0) ? p : null;
-          var ok = HoneyContent.save(state);
-          toast(ok ? 'Сохранено — сайт обновлён' : 'Не удалось сохранить (хранилище недоступно)', !ok);
-          try {
-            if (iframe.contentWindow && iframe.contentWindow.applyHoneyOverrides) {
-              iframe.contentWindow.applyHoneyOverrides();
-            } else {
-              iframe.contentWindow.location.reload();
-            }
-          } catch (e) {
-            iframe.contentWindow.location.reload();
+        // ---------- Сохранение ----------
+        function markDirty() {
+          dirty = true;
+          renderSaveStatus();
+          if (autoSave) {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveNow, 1400);
           }
+          schedulePreview();
         }
 
+        function saveNow() {
+          clearTimeout(saveTimer);
+          var res = H.save(state);
+          var st = document.getElementById('saveStatus');
+          st.innerHTML = '<b>Сохранение…</b>';
+          res.remote.then(function (r) {
+            dirty = false;
+            if (r.ok) {
+              lastSavedAt = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              cloudOk = true;
+              setConn('ok', 'Облако подключено');
+              renderSaveStatus();
+              toast('Сохранено · ' + lastSavedAt);
+            } else {
+              cloudOk = false;
+              setConn('err', 'Ошибка облака');
+              renderSaveStatus();
+              var msg = r.error === 'no-config' ? 'не настроено' : r.error;
+              toast('Сохранено локально, но в облако не ушло: ' + msg, true, 4200);
+            }
+            schedulePreview();
+          });
+        }
+
+        function schedulePreview() {
+          clearTimeout(pvTimer);
+          pvTimer = setTimeout(updatePreview, 450);
+        }
+
+        function updatePreview() {
+          var win = iframe.contentWindow;
+          if (!win) return;
+          try {
+            if (win.applyHoneyOverrides) { win.applyHoneyOverrides(); }
+            else { win.location.reload(); }
+          } catch (e) { try { win.location.reload(); } catch (e2) {} }
+        }
+
+        // ---------- Синхронизация ----------
+        function doSync(silent) {
+          setConn('off', 'Синхронизация…');
+          H.sync(function (res) {
+            if (res.ok) {
+              cloudOk = true;
+              setConn('ok', 'Облако подключено');
+              reloadStateFromCache();
+              buildEditor();
+              updatePreview();
+              if (!silent) toast('Данные обновлены из облака');
+            } else {
+              cloudOk = false;
+              setConn('err', 'Ошибка облака');
+              if (!silent) toast('Не удалось связаться с облаком: ' + (res.error || '?'), true, 4200);
+            }
+            renderSaveStatus();
+          });
+        }
+
+        // ---------- Действия ----------
         function resetAll() {
-          if (!window.confirm('Вернуть все тексты, цену и отзывы к исходным? Это действие нельзя отменить.')) return;
-          HoneyContent.clear();
-          resetState();
-          priceInput.value = HoneyContent.BASE_PRICE;
-          buildEditor();
-          iframe.contentWindow.location.reload();
-          toast('Все правки сброшены к оригиналу');
+          if (!window.confirm('Вернуть все тексты, цену и отзывы к исходным?\nИзменения будут удалены и на этом устройстве, и в облаке.')) return;
+          H.reset().then(function (r) {
+            if (!r.ok) toast('Сброшено локально, облако: ' + r.error, true, 4200);
+            else toast('Все правки сброшены к оригиналу');
+            reloadStateFromCache();
+            buildEditor();
+            updatePreview();
+          });
         }
 
         function exportJson() {
@@ -463,12 +753,12 @@
           reader.onload = function () {
             try {
               var d = JSON.parse(reader.result);
-              state = {
+              state = freshState({
                 texts: d.texts && typeof d.texts === 'object' ? d.texts : {},
                 price: typeof d.price === 'number' ? d.price : null,
                 extras: Array.isArray(d.extras) ? d.extras : []
-              };
-              save();
+              });
+              saveNow();
               buildEditor();
               toast('Правки импортированы');
             } catch (e) {
@@ -479,39 +769,65 @@
         }
 
         function init() {
-          var saved = HoneyContent.load();
-          state = {
-            texts: Object.assign({}, saved.texts),
-            price: saved.price,
-            extras: saved.extras.map(function (e) { return { author: e.author || '', city: e.city || '', quote: e.quote || '' }; })
-          };
-          var items = collectFromSite();
-          if (!items) {
+          reloadStateFromCache();
+          if (H.isConfigured()) {
+            doSync(true);
+            H.startPolling(function () {
+              reloadStateFromCache();
+              buildEditor();
+              updatePreview();
+              toast('На другом устройстве изменили контент — обновлено');
+            }, 15000);
+          } else {
+            setConn('off', 'Локальный режим');
+            renderSaveStatus();
+          }
+          if (!collectFromSite()) {
             iframe.addEventListener('load', function () { if (collectFromSite()) buildEditor(); });
-            setTimeout(function () { if (collectFromSite()) buildEditor(); }, 800);
+            setTimeout(function () { if (collectFromSite()) buildEditor(); }, 900);
           } else {
             buildEditor();
           }
         }
 
-        iframe.addEventListener('load', function () {
-          if (!items.length && collectFromSite()) buildEditor();
-        });
-
-        document.getElementById('saveBtn').addEventListener('click', save);
-        document.getElementById('saveBtn2').addEventListener('click', save);
+        // ---------- События ----------
+        document.getElementById('saveBtn').addEventListener('click', saveNow);
+        document.getElementById('saveBtn2').addEventListener('click', saveNow);
         document.getElementById('resetBtn').addEventListener('click', resetAll);
         document.getElementById('exportBtn').addEventListener('click', exportJson);
+        document.getElementById('syncBtn').addEventListener('click', function () { doSync(false); });
+        document.getElementById('autoSave').addEventListener('change', function () {
+          autoSave = this.checked;
+          if (autoSave && dirty) saveNow();
+        });
         document.getElementById('importFile').addEventListener('change', function () {
           if (this.files && this.files[0]) importJson(this.files[0]);
         });
 
+        document.querySelectorAll('.zoom-btn').forEach(function (b) {
+          b.addEventListener('click', function () {
+            document.querySelectorAll('.zoom-btn').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            var z = parseFloat(b.getAttribute('data-zoom'));
+            var w = document.getElementById('pvWrap');
+            w.style.width = Math.round(1440 * z) + 'px';
+            w.style.height = Math.round(4037 * z) + 'px';
+            w.style.transform = 'scale(' + z + ')';
+          });
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveNow();
+          }
+        });
+
         window.addEventListener('storage', function (e) {
-          if (e.key !== HoneyContent.KEY) return;
-          state = HoneyContent.load();
-          items = collectFromSite() || items;
-          priceInput.value = state.price || HoneyContent.BASE_PRICE;
+          if (e.key !== H.KEY) return;
+          reloadStateFromCache();
           buildEditor();
+          updatePreview();
         });
 
         init();
