@@ -1,0 +1,7 @@
+﻿# Editor files
+.vscode/
+.idea/
+*.log
+
+# Local config with real secrets (do not commit)
+supabase-config.local.js

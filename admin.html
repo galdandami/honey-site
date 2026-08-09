@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Админ-панель · Мёд Камского Устья</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="editable-content.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: #f6f1e6;
+        color: #2b1d0e;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 24px;
+        background: #241a0f;
+        color: #f3e6c9;
+      }
+      .logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: #e09a2b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 700 18px Playfair Display, serif;
+        color: #241a0f;
+        flex-shrink: 0;
+      }
+      .htitle {
+        font: 600 18px Playfair Display, serif;
+        margin: 0;
+      }
+      .hsub { font-size: 12px; color: #a99572; margin-top: 2px; }
+      .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .actions a, .actions button, .file-label {
+        font: 600 13px Inter, sans-serif;
+        padding: 9px 16px;
+        border-radius: 9999px;
+        cursor: pointer;
+        border: 0;
+        text-decoration: none;
+        display: inline-block;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+      .actions a:hover, .actions button:hover, .file-label:hover { transform: translateY(-1px); }
+      .btn-ghost { background: #3a2c18; color: #e8d9b8; }
+      .btn-ghost:hover { background: #46351c; }
+      .btn-amber { background: #e09a2b; color: #241a0f; font-weight: 700; }
+      .btn-amber:hover { box-shadow: 0 8px 20px rgba(224, 154, 43, 0.4); }
+      .btn-danger { background: #7a2e2e; color: #f3e6c9; }
+      .file-input { display: none; }
+
+      .wrap {
+        display: grid;
+        grid-template-columns: 480px 1fr;
+        height: calc(100vh - 68px);
+      }
+      .editor {
+        overflow-y: auto;
+        padding: 18px 16px 90px;
+        border-right: 1px solid #efe3cb;
+        background: #faf6ec;
+      }
+      .card {
+        background: #fffdf7;
+        border: 1px solid #efe3cb;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 10px rgba(107, 74, 24, 0.06);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font: 600 17px Playfair Display, serif;
+        color: #2b1d0e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card h2 .cnt {
+        font: 11px Inter, sans-serif;
+        color: #97836a;
+        background: #f2e6c8;
+        border-radius: 9999px;
+        padding: 2px 8px;
+      }
+      .row { margin-bottom: 10px; }
+      .row label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #97836a;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 4px;
+      }
+      .row label .reset {
+        color: #b97a12;
+        cursor: pointer;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+      }
+      .row label .reset:hover { text-decoration: underline; }
+      .row textarea, .row input[type="text"], .row input[type="number"] {
+        width: 100%;
+        border: 1px solid #efe3cb;
+        border-radius: 10px;
+        padding: 9px 11px;
+        font: 13px/1.5 Inter, sans-serif;
+        color: #2b1d0e;
+        background: #fffdf7;
+        resize: vertical;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      .row textarea:focus, .row input:focus {
+        outline: 0;
+        border-color: #e09a2b;
+        box-shadow: 0 0 0 3px rgba(224, 154, 43, 0.18);
+      }
+      .price-wrap { display: flex; align-items: center; gap: 10px; }
+      .price-wrap input { max-width: 140px; font-size: 18px; font-weight: 700; }
+      .price-hint { font-size: 12px; color: #97836a; }
+
+      .extras .extra {
+        border: 1px solid #efe3cb;
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #fbf7ef;
+      }
+      .extra .grid3 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+      .extra .grid3 input { border: 1px solid #efe3cb; border-radius: 8px; padding: 8px 10px; font: 13px Inter, sans-serif; color: #2b1d0e; }
+      .extra .grid3 input:focus { outline: 0; border-color: #e09a2b; }
+      .extra textarea {
+        width: 100%;
+        border: 1px solid #efe3cb;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: 13px/1.5 Inter, sans-serif;
+        color: #2b1d0e;
+        resize: vertical;
+      }
+      .extra .rs { display: flex; justify-content: flex-end; margin-top: 6px; }
+      .extra .rs button {
+        font: 600 12px Inter, sans-serif;
+        color: #7a2e2e;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 8px;
+      }
+      .extra .rs button:hover { background: #f7e8e4; }
+      .add-btn {
+        width: 100%;
+        padding: 10px;
+        border: 1px dashed #d8c49a;
+        border-radius: 10px;
+        background: transparent;
+        color: #b97a12;
+        font: 600 13px Inter, sans-serif;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .add-btn:hover { background: #f9f1dd; }
+
+      .status { font-size: 12px; color: #a99572; margin-top: 8px; text-align: center; }
+
+      .savebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 480px;
+        padding: 12px 16px;
+        background: linear-gradient(to top, #faf6ec 70%, rgba(250, 246, 236, 0));
+        text-align: center;
+        z-index: 9;
+      }
+      .savebar button {
+        width: 100%;
+        padding: 13px;
+        border: 0;
+        border-radius: 9999px;
+        background: #e09a2b;
+        color: #241a0f;
+        font: 700 15px Inter, sans-serif;
+        cursor: pointer;
+        box-shadow: 0 10px 26px rgba(224, 154, 43, 0.35);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .savebar button:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(224, 154, 43, 0.45); }
+      .savebar button:active { transform: scale(0.98); }
+
+      .preview {
+        overflow: auto;
+        padding: 16px;
+        background: #ece4d2;
+      }
+      .preview-note {
+        font-size: 12px;
+        color: #97836a;
+        margin-bottom: 8px;
+      }
+      .pv-wrap {
+        width: 691px;
+        height: 1938px;
+        overflow: hidden;
+        transform: scale(0.48);
+        transform-origin: top left;
+        box-shadow: 0 12px 40px rgba(36, 26, 15, 0.25);
+      }
+      .pv-wrap iframe {
+        width: 1440px;
+        height: 4037px;
+        border: 0;
+        pointer-events: none;
+        background: #fff;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translate(-50%, 20px);
+        padding: 13px 24px;
+        border-radius: 9999px;
+        background: #241a0f;
+        color: #f3e6c9;
+        font: 600 14px Inter, sans-serif;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        z-index: 99;
+      }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+      .toast.error { background: #7a2e2e; }
+
+      .err {
+        padding: 24px;
+        text-align: center;
+        color: #7a2e2e;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      @media (max-width: 1100px) {
+        .wrap { grid-template-columns: 1fr; height: auto; }
+        .editor { border-right: 0; }
+        .preview { display: none; }
+        .savebar { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">М</div>
+      <div>
+        <p class="htitle">Админ-панель · Мёд Камского Устья</p>
+        <div class="hsub">Редактирование текстов, цены и отзывов лендинга</div>
+      </div>
+      <div class="actions">
+        <a class="btn-ghost" href="index.html" title="Открыть сайт">Открыть сайт</a>
+        <button class="btn-ghost" id="exportBtn">Экспорт JSON</button>
+        <label class="btn-ghost file-label" for="importFile">Импорт JSON</label>
+        <input class="file-input" id="importFile" type="file" accept="application/json" />
+        <button class="btn-danger" id="resetBtn">Сбросить</button>
+        <button class="btn-amber" id="saveBtn">Сохранить</button>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="editor" id="editor"></div>
+      <div class="preview">
+        <div class="preview-note">Предпросмотр сайта — обновляется после сохранения</div>
+        <div class="pv-wrap"><iframe id="preview" src="index.html"></iframe></div>
+      </div>
+    </div>
+
+    <div class="savebar"><button id="saveBtn2">Сохранить изменения</button></div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+      (function () {
+        var iframe = document.getElementById('preview');
+        var editor = document.getElementById('editor');
+        var priceInput = null;
+        var extrasWrap = null;
+        var state = null;
+        var items = [];
+
+        var toastEl = document.getElementById('toast');
+        var toastTimer = null;
+        function toast(msg, error) {
+          toastEl.textContent = msg;
+          toastEl.classList.toggle('error', !!error);
+          toastEl.classList.add('show');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+        }
+
+        function resetState() {
+          state = { texts: {}, price: null, extras: [] };
+        }
+
+        function collectFromSite() {
+          try {
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc) return null;
+            items = HoneyContent.collect(doc);
+            return items;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function buildEditor() {
+          if (!items.length) {
+            editor.innerHTML = '<div class="err">Не удалось прочитать содержимое сайта. Откройте эту страницу в Chrome или Edge (превью подключится к index.html автоматически).</div>';
+            return;
+          }
+          var html = '';
+          html += '<div class="card"><h2>Цена <span class="cnt">за кг</span></h2>';
+          html += '<div class="price-wrap"><input type="number" id="priceInput" value="' + (state.price || HoneyContent.BASE_PRICE) + '" min="1" step="1" /><span class="price-hint">₽ за килограмм. Цена на сайте, в корзине и степпере пересчитается автоматически.</span></div></div>';
+
+          var bySection = {};
+          items.forEach(function (it) {
+            (bySection[it.section] = bySection[it.section] || []).push(it);
+          });
+          HoneyContent.SECTIONS.forEach(function (sec) {
+            var list = bySection[sec] || [];
+            if (!list.length) return;
+            html += '<div class="card"><h2>' + sec + ' <span class="cnt">' + list.length + '</span></h2>';
+            list.forEach(function (it) {
+              var val = (state.texts[it.key] !== undefined ? state.texts[it.key] : it.text);
+              html += '<div class="row" data-key="' + it.key + '"><label><span>' + (it.name || 'text') + '</span><span class="reset" data-reset="' + it.key + '">сбросить</span></label>';
+              html += '<textarea rows="2" data-key="' + it.key + '" data-original="' + escAttr(it.text) + '">' + escHtml(val) + '</textarea></div>';
+            });
+            html += '</div>';
+          });
+
+          html += '<div class="card extras"><h2>Дополнительные отзывы <span class="cnt">' + state.extras.length + '</span></h2>';
+          html += '<div id="extrasWrap"></div>';
+          html += '<button class="add-btn" id="addExtra">+ Добавить отзыв</button></div>';
+
+          editor.innerHTML = html;
+          priceInput = document.getElementById('priceInput');
+          extrasWrap = document.getElementById('extrasWrap');
+
+          editor.querySelectorAll('textarea').forEach(function (ta) {
+            ta.addEventListener('input', function () {
+              var key = ta.getAttribute('data-key');
+              var orig = ta.getAttribute('data-original');
+              var v = ta.value.trim();
+              if (v === orig) { delete state.texts[key]; } else { state.texts[key] = v; }
+            });
+          });
+          editor.querySelectorAll('[data-reset]').forEach(function (sp) {
+            sp.addEventListener('click', function () {
+              var key = sp.getAttribute('data-reset');
+              delete state.texts[key];
+              var ta = editor.querySelector('textarea[data-key="' + key + '"]');
+              if (ta) ta.value = items.filter(function (i) { return i.key === key; })[0].text;
+            });
+          });
+          document.getElementById('addExtra').addEventListener('click', function () {
+            state.extras.push({ author: '', city: '', quote: '' });
+            buildExtras();
+          });
+          buildExtras();
+        }
+
+        function escHtml(s) {
+          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function escAttr(s) {
+          return escHtml(s).replace(/"/g, '&quot;');
+        }
+
+        function buildExtras() {
+          if (!extrasWrap) return;
+          var html = '';
+          state.extras.forEach(function (e, i) {
+            html += '<div class="extra"><div class="grid3">';
+            html += '<input type="text" placeholder="Имя" data-ef="author" data-idx="' + i + '" value="' + escAttr(e.author || '') + '" />';
+            html += '<input type="text" placeholder="Город" data-ef="city" data-idx="' + i + '" value="' + escAttr(e.city || '') + '" />';
+            html += '</div><textarea rows="2" placeholder="Текст отзыва" data-ef="quote" data-idx="' + i + '">' + escHtml(e.quote || '') + '</textarea>';
+            html += '<div class="rs"><button data-del="' + i + '">Удалить</button></div></div>';
+          });
+          extrasWrap.innerHTML = html || '<div class="status">Пока нет дополнительных отзывов — основные три можно редактировать в секции «Отзывы» выше.</div>';
+          extrasWrap.querySelectorAll('[data-ef]').forEach(function (inp) {
+            inp.addEventListener('input', function () {
+              state.extras[Number(inp.getAttribute('data-idx'))][inp.getAttribute('data-ef')] = inp.value;
+            });
+          });
+          extrasWrap.querySelectorAll('[data-del]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              state.extras.splice(Number(b.getAttribute('data-del')), 1);
+              buildExtras();
+              var cnt = editor.querySelector('.extras .cnt');
+              if (cnt) cnt.textContent = state.extras.length;
+            });
+          });
+        }
+
+        function save() {
+          var p = parseFloat(priceInput ? priceInput.value : '');
+          state.price = (p > 0) ? p : null;
+          var ok = HoneyContent.save(state);
+          toast(ok ? 'Сохранено — сайт обновлён' : 'Не удалось сохранить (хранилище недоступно)', !ok);
+          try {
+            if (iframe.contentWindow && iframe.contentWindow.applyHoneyOverrides) {
+              iframe.contentWindow.applyHoneyOverrides();
+            } else {
+              iframe.contentWindow.location.reload();
+            }
+          } catch (e) {
+            iframe.contentWindow.location.reload();
+          }
+        }
+
+        function resetAll() {
+          if (!window.confirm('Вернуть все тексты, цену и отзывы к исходным? Это действие нельзя отменить.')) return;
+          HoneyContent.clear();
+          resetState();
+          priceInput.value = HoneyContent.BASE_PRICE;
+          buildEditor();
+          iframe.contentWindow.location.reload();
+          toast('Все правки сброшены к оригиналу');
+        }
+
+        function exportJson() {
+          var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'honey-site-content.json';
+          a.click();
+          URL.revokeObjectURL(a.href);
+          toast('JSON-файл скачан');
+        }
+
+        function importJson(file) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            try {
+              var d = JSON.parse(reader.result);
+              state = {
+                texts: d.texts && typeof d.texts === 'object' ? d.texts : {},
+                price: typeof d.price === 'number' ? d.price : null,
+                extras: Array.isArray(d.extras) ? d.extras : []
+              };
+              save();
+              buildEditor();
+              toast('Правки импортированы');
+            } catch (e) {
+              toast('Ошибка: неверный JSON', true);
+            }
+          };
+          reader.readAsText(file);
+        }
+
+        function init() {
+          var saved = HoneyContent.load();
+          state = {
+            texts: Object.assign({}, saved.texts),
+            price: saved.price,
+            extras: saved.extras.map(function (e) { return { author: e.author || '', city: e.city || '', quote: e.quote || '' }; })
+          };
+          var items = collectFromSite();
+          if (!items) {
+            iframe.addEventListener('load', function () { if (collectFromSite()) buildEditor(); });
+            setTimeout(function () { if (collectFromSite()) buildEditor(); }, 800);
+          } else {
+            buildEditor();
+          }
+        }
+
+        iframe.addEventListener('load', function () {
+          if (!items.length && collectFromSite()) buildEditor();
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', save);
+        document.getElementById('saveBtn2').addEventListener('click', save);
+        document.getElementById('resetBtn').addEventListener('click', resetAll);
+        document.getElementById('exportBtn').addEventListener('click', exportJson);
+        document.getElementById('importFile').addEventListener('change', function () {
+          if (this.files && this.files[0]) importJson(this.files[0]);
+        });
+
+        window.addEventListener('storage', function (e) {
+          if (e.key !== HoneyContent.KEY) return;
+          state = HoneyContent.load();
+          items = collectFromSite() || items;
+          priceInput.value = state.price || HoneyContent.BASE_PRICE;
+          buildEditor();
+        });
+
+        init();
+      })();
+    </script>
+  </body>
+</html>
