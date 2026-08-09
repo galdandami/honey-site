@@ -484,15 +484,59 @@
           };
         }
 
-        function collectFromSite() {
+        // ---------- Мост к превью (работает и из file://) ----------
+        var reqId = 0;
+        var pending = {};
+        window.addEventListener('message', function (ev) {
+          if (!iframe.contentWindow || ev.source !== iframe.contentWindow) return;
+          var d = ev.data;
+          if (!d || d.hns !== 'admin' || !d.id) return;
+          var p = pending[d.id];
+          if (!p) return;
+          clearTimeout(p._t);
+          delete pending[d.id];
+          p(d);
+        });
+
+        function request(action, payload, timeout) {
+          return new Promise(function (resolve) {
+            var win = iframe.contentWindow;
+            if (!win) { resolve(null); return; }
+            var id = 'r' + (++reqId);
+            var t = setTimeout(function () { delete pending[id]; resolve(null); }, timeout || 4000);
+            pending[id] = function (d) { resolve(d); };
+            pending[id]._t = t;
+            try {
+              win.postMessage(Object.assign({ hns: 'site', id: id, action: action }, payload || {}), '*');
+            } catch (e) {
+              clearTimeout(t);
+              delete pending[id];
+              resolve(null);
+            }
+          });
+        }
+
+        function collectFromSite(cb) {
           try {
             var doc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!doc) return false;
-            items = H.collect(doc);
-            byKey = {};
-            items.forEach(function (it) { byKey[it.key] = it; });
-            return true;
-          } catch (e) { return false; }
+            if (doc) {
+              items = H.collect(doc);
+              byKey = {};
+              items.forEach(function (it) { byKey[it.key] = it; });
+              cb(true);
+              return;
+            }
+          } catch (e) {}
+          request('collect').then(function (d) {
+            if (d && d.ok && d.items && d.items.length) {
+              items = d.items;
+              byKey = {};
+              items.forEach(function (it) { byKey[it.key] = it; });
+              cb(true);
+            } else {
+              cb(false);
+            }
+          });
         }
 
         function reloadStateFromCache() {
@@ -732,9 +776,9 @@
           var win = iframe.contentWindow;
           if (!win) return;
           try {
-            if (win.applyHoneyOverrides) { win.applyHoneyOverrides(); }
-            else { win.location.reload(); }
-          } catch (e) { try { win.location.reload(); } catch (e2) {} }
+            if (win.applyHoneyOverrides) { win.applyHoneyOverrides(); return; }
+          } catch (e) {}
+          request('apply', {}, 2500);
         }
 
         // ---------- Синхронизация ----------
@@ -787,6 +831,7 @@
               state = freshState({
                 texts: d.texts && typeof d.texts === 'object' ? d.texts : {},
                 price: typeof d.price === 'number' ? d.price : null,
+                jars: d.jars || null,
                 extras: Array.isArray(d.extras) ? d.extras : []
               });
               saveNow();
@@ -797,6 +842,17 @@
             }
           };
           reader.readAsText(file);
+        }
+
+        function tryBuild(triesLeft) {
+          collectFromSite(function (ok) {
+            if (ok) { buildEditor(); return; }
+            if (triesLeft > 0) {
+              setTimeout(function () { tryBuild(triesLeft - 1); }, 700);
+            } else {
+              editor.innerHTML = '<div class="err">Превью не отвечает.<br/>Обновите страницу (F5) или откройте админку, запустив start-server.bat.</div>';
+            }
+          });
         }
 
         function init() {
@@ -813,12 +869,7 @@
             setConn('off', 'Локальный режим');
             renderSaveStatus();
           }
-          if (!collectFromSite()) {
-            iframe.addEventListener('load', function () { if (collectFromSite()) buildEditor(); });
-            setTimeout(function () { if (collectFromSite()) buildEditor(); }, 900);
-          } else {
-            buildEditor();
-          }
+          tryBuild(6);
         }
 
         // ---------- События ----------
@@ -835,17 +886,19 @@
           if (this.files && this.files[0]) importJson(this.files[0]);
         });
 
-        document.querySelectorAll('.zoom-btn').forEach(function (b) {
-          b.addEventListener('click', function () {
-            document.querySelectorAll('.zoom-btn').forEach(function (x) { x.classList.remove('active'); });
-            b.classList.add('active');
-            var z = parseFloat(b.getAttribute('data-zoom'));
-            var w = document.getElementById('pvWrap');
-            w.style.width = Math.round(1440 * z) + 'px';
-            w.style.height = Math.round(4037 * z) + 'px';
-            w.style.transform = 'scale(' + z + ')';
+        function setZoom(z) {
+          document.querySelectorAll('.zoom-btn').forEach(function (x) {
+            x.classList.toggle('active', Math.abs(parseFloat(x.getAttribute('data-zoom')) - z) < 0.001);
           });
+          var w = document.getElementById('pvWrap');
+          w.style.width = Math.round(1440 * z) + 'px';
+          w.style.height = Math.round(4037 * z) + 'px';
+          w.style.transform = 'scale(' + z + ')';
+        }
+        document.querySelectorAll('.zoom-btn').forEach(function (b) {
+          b.addEventListener('click', function () { setZoom(parseFloat(b.getAttribute('data-zoom'))); });
         });
+        setZoom(0.48);
 
         document.addEventListener('keydown', function (e) {
           if ((e.ctrlKey || e.metaKey) && e.key === 's') {

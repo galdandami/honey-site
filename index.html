@@ -2424,6 +2424,26 @@
             }
           });
         }
+
+        // Мост для админки: отвечает на запросы даже при открытии из file://
+        window.addEventListener('message', function (ev) {
+          var d = ev.data;
+          if (!d || typeof d !== 'object' || d.hns !== 'site') return;
+          var reply = function (payload) {
+            if (ev.source && ev.source.postMessage) {
+              try { ev.source.postMessage(Object.assign({ hns: 'admin', id: d.id }, payload), '*'); } catch (e) {}
+            }
+          };
+          if (d.action === 'collect') {
+            var its = HoneyContent.collect(document).map(function (it) {
+              return { key: it.key, name: it.name, section: it.section, text: it.text };
+            });
+            reply({ ok: true, items: its });
+          } else if (d.action === 'apply') {
+            applyHoneyOverrides();
+            reply({ ok: true });
+          }
+        });
       })();
     </script>
   </body>
