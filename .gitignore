@@ -5,3 +5,6 @@
 
 # Local config with real secrets (do not commit)
 supabase-config.local.js
+
+# AI context file with keys/URLs (never commit)
+AI-CONTEXT.md
