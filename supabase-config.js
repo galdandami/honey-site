@@ -12,5 +12,5 @@
 window.SupabaseConfig = {
   url: "",
   anonKey: "",
-  editorSecret: "CHANGE_ME"
+  editorSecret: ""
 };
